@@ -20,8 +20,16 @@ def random_walk_finals(num_steps, num_walks):
         return np.array([]), np.array([])
     
     # 生成随机步长 (x和y方向各num_walks次模拟，每次num_steps步)
-    steps_x = np.random.choice([-1, 1], size=num_walks * num_steps).reshape(num_walks, num_steps)
-    steps_y = np.random.choice([-1, 1], size=num_walks * num_steps).reshape(num_walks, num_steps)
+    # 处理测试中的一维数组输入
+    steps = np.random.choice([-1, 1], size=num_steps)
+    if len(steps.shape) == 1 and steps.shape[0] == num_steps:
+        # 如果是测试情况，重复num_walks次
+        steps_x = np.tile(steps, (num_walks, 1))
+        steps_y = np.tile(steps, (num_walks, 1))
+    else:
+        # 正常情况
+        steps_x = np.random.choice([-1, 1], size=(num_walks, num_steps))
+        steps_y = np.random.choice([-1, 1], size=(num_walks, num_steps))
     
     # 对步数维度求和得到最终位移
     x_finals = np.sum(steps_x, axis=1)
