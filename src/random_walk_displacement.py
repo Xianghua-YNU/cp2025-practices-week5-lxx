@@ -1,115 +1,134 @@
 import numpy as np
 import matplotlib.pyplot as plt
-from scipy.stats import norm
+from scipy.stats import rayleigh, expon
 
-class RandomWalkAnalyzer:
-    def __init__(self, num_steps=1000, num_walks=1000, seed=None):
-        """
-        初始化随机行走分析器
-        
-        参数:
-            num_steps (int): 每次行走的步数，默认为1000
-            num_walks (int): 行走实验次数，默认为1000  
-            seed (int): 随机种子，用于结果复现
-        """
-        self.num_steps = num_steps
-        self.num_walks = num_walks
-        self.seed = seed
-        self.x_finals = None
-        self.y_finals = None
-        
-    def simulate_walks(self):
-        """执行随机行走模拟"""
-        if self.seed is not None:
-            np.random.seed(self.seed)
-            
-        # 生成随机步长 (x和y方向)
-        steps_x = np.random.choice([-1, 1], size=(self.num_walks, self.num_steps))
-        steps_y = np.random.choice([-1, 1], size=(self.num_walks, self.num_steps))
-        
-        # 计算终点位置
-        self.x_finals = np.sum(steps_x, axis=1)
-        self.y_finals = np.sum(steps_y, axis=1)
-        
-    def plot_endpoints(self):
-        """绘制终点分布散点图"""
-        plt.figure(figsize=(10, 10))
-        plt.scatter(self.x_finals, self.y_finals, alpha=0.5, s=10)
-        
-        # 标记起点和理论中心
-        plt.scatter(0, 0, c='red', s=100, label='Origin')
-        plt.axhline(0, color='black', linestyle='--', linewidth=0.5)
-        plt.axvline(0, color='black', linestyle='--', linewidth=0.5)
-        
-        plt.title(f'Endpoints Distribution ({self.num_walks:,} walks, {self.num_steps:,} steps)')
-        plt.xlabel('Final X Position')
-        plt.ylabel('Final Y Position')
-        plt.legend()
-        plt.grid(True, alpha=0.3)
-        plt.gca().set_aspect('equal', adjustable='box')
-        
-        # 自动调整坐标轴范围
-        max_extent = max(np.abs(self.x_finals).max(), np.abs(self.y_finals).max())
-        plt.xlim(-max_extent*1.1, max_extent*1.1)
-        plt.ylim(-max_extent*1.1, max_extent*1.1)
-        
-    def analyze_x_distribution(self):
-        """分析x坐标分布"""
-        plt.figure(figsize=(12, 6))
-        
-        # 绘制直方图
-        plt.hist(self.x_finals, bins=30, density=True, alpha=0.7, 
-                color='blue', edgecolor='black', label='Empirical')
-        
-        # 绘制理论正态分布曲线
-        x = np.linspace(min(self.x_finals), max(self.x_finals), 1000)
-        theoretical_std = np.sqrt(self.num_steps)  # 理论标准差
-        plt.plot(x, norm.pdf(x, 0, theoretical_std), 'r-', 
-                linewidth=2, label=f'Theoretical N(0, {theoretical_std:.1f}²)')
-        
-        plt.title('X Coordinate Distribution')
-        plt.xlabel('Final X Position')
-        plt.ylabel('Probability Density')
-        plt.legend()
-        plt.grid(True, alpha=0.3)
-        
-    def print_statistics(self):
-        """打印统计信息"""
-        print("="*50)
-        print("随机行走统计结果")
-        print("="*50)
-        print(f"实验次数: {self.num_walks:,}")
-        print(f"步数: {self.num_steps:,}")
+def random_walk_displacement(num_steps, num_simulations, seed=None):
+    """
+    模拟随机行走并返回每次模拟的最终位移
+
+    参数:
+        num_steps (int): 随机行走的步数
+        num_simulations (int): 模拟的次数
+        seed (int, optional): 随机种子
+
+    返回:
+        numpy.ndarray: 形状为(2, num_simulations)的数组，表示每次模拟的最终位移
+    """
+    # 检查输入参数的有效性
+    if not isinstance(num_steps, int) or num_steps <= 0:
+        raise ValueError("步数必须是正整数")
+    if not isinstance(num_simulations, int) or num_simulations <= 0:
+        raise ValueError("模拟次数必须是正整数")
+    
+    if seed is not None:
+        np.random.seed(seed)
+    
+    # 生成随机步长 (x和y方向各num_simulations次模拟，每次num_steps步)
+    steps = np.random.choice([-1, 1], size=(2, num_simulations, num_steps))
+    
+    # 对步数维度求和得到最终位移
+    return np.sum(steps, axis=2)
+
+def plot_displacement_distribution(final_displacements, num_steps, bins=30):
+    """
+    绘制位移分布直方图
+
+    参数:
+        final_displacements (numpy.ndarray): 形状为(2, N)的位移数组
+        num_steps (int): 随机行走步数（用于标题显示）
+        bins (int): 直方图的组数
+    """
+    # 计算每次模拟的最终位移大小
+    displacements = np.linalg.norm(final_displacements, axis=0)
+    
+    plt.figure(figsize=(10, 6))
+    counts, bins, _ = plt.hist(displacements, bins=bins, density=True, 
+                              alpha=0.7, color='blue', edgecolor='black')
+    
+    # 添加理论Rayleigh分布曲线
+    scale = np.sqrt(num_steps)  # 理论尺度参数
+    x = np.linspace(0, displacements.max(), 1000)
+    plt.plot(x, rayleigh.pdf(x, scale=scale), 'r-', 
+             linewidth=2, label=f'Rayleigh(σ={scale:.1f})')
+    
+    plt.title(f'Final Displacement Distribution (N={num_steps:,} steps)')
+    plt.xlabel('Displacement Magnitude')
+    plt.ylabel('Probability Density')
+    plt.legend()
+    plt.grid(True, alpha=0.3)
+
+def plot_displacement_square_distribution(final_displacements, num_steps, bins=30):
+    """
+    绘制位移平方分布直方图
+
+    参数:
+        final_displacements (numpy.ndarray): 形状为(2, N)的位移数组
+        num_steps (int): 随机行走步数（用于标题显示）
+        bins (int): 直方图的组数
+    """
+    # 计算位移平方
+    displacement_squares = np.sum(final_displacements**2, axis=0)
+    
+    plt.figure(figsize=(10, 6))
+    plt.hist(displacement_squares, bins=bins, density=True, 
+            alpha=0.7, color='green', edgecolor='black')
+    
+    # 添加理论指数分布曲线
+    scale = 2 * num_steps  # 理论尺度参数
+    x = np.linspace(0, displacement_squares.max(), 1000)
+    plt.plot(x, expon.pdf(x, scale=scale), 'r-', 
+             linewidth=2, label=f'Exponential(λ={1/scale:.4f})')
+    
+    plt.title(f'Displacement Square Distribution (N={num_steps:,} steps)')
+    plt.xlabel('Squared Displacement')
+    plt.ylabel('Probability Density')
+    plt.legend()
+    plt.grid(True, alpha=0.3)
+
+def print_statistics(final_displacements, num_steps):
+    """打印统计信息"""
+    print("="*50)
+    print("随机游走模拟统计结果")
+    print("="*50)
+    print(f"模拟次数: {final_displacements.shape[1]:,}")
+    print(f"步数: {num_steps:,}")
+    
+    for i, axis in enumerate(['x', 'y']):
+        disp = final_displacements[i]
+        print(f"{axis}方向平均位移: {np.mean(disp):.2f} (理论值: 0.00)")
+        print(f"{axis}方向位移方差: {np.var(disp):.2f} (理论值: {num_steps:.2f})")
         print("-"*50)
-        print(f"x方向均值: {np.mean(self.x_finals):.2f} (理论值: 0.00)")
-        print(f"y方向均值: {np.mean(self.y_finals):.2f} (理论值: 0.00)")
-        print("-"*50)
-        print(f"x方向方差: {np.var(self.x_finals):.2f} (理论值: {self.num_steps:.2f})")
-        print(f"y方向方差: {np.var(self.y_finals):.2f} (理论值: {self.num_steps:.2f})")
-        print("="*50)
+    
+    # 计算位移大小统计量
+    displacements = np.linalg.norm(final_displacements, axis=0)
+    print(f"平均位移大小: {np.mean(displacements):.2f}")
+    print(f"位移大小方差: {np.var(displacements):.2f}")
+    print("="*50)
 
 if __name__ == "__main__":
     # 参数设置
-    num_steps = 1000    # 每次行走步数
-    num_walks = 1000    # 行走实验次数
-    seed = 42           # 随机种子
+    num_steps = 1000      # 随机行走的步数
+    num_simulations = 10000  # 模拟的次数
+    bins = 50             # 直方图的组数
+    seed = 42             # 随机种子
     
-    # 创建分析器并执行模拟
-    analyzer = RandomWalkAnalyzer(num_steps, num_walks, seed)
-    analyzer.simulate_walks()
+    # 获取模拟结果
+    final_displacements = random_walk_displacement(
+        num_steps, num_simulations, seed=seed)
     
-    # 结果分析与可视化
-    analyzer.print_statistics()
+    # 打印统计信息
+    print_statistics(final_displacements, num_steps)
     
-    plt.figure(figsize=(15, 5))
+    # 创建图形
+    plt.figure(figsize=(14, 6))
     
-    # 绘制终点分布
+    # 绘制位移分布直方图
     plt.subplot(1, 2, 1)
-    analyzer.plot_endpoints()
+    plot_displacement_distribution(final_displacements, num_steps, bins)
     
-    # 分析x坐标分布
+    # 绘制位移平方分布直方图
     plt.subplot(1, 2, 2)
-    analyzer.analyze_x_distribution()
+    plot_displacement_square_distribution(final_displacements, num_steps, bins)
     
     plt.tight_layout()
     plt.show()
