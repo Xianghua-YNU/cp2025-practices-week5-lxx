@@ -13,19 +13,21 @@ def random_walk_finals(num_steps, num_walks):
     返回:
         tuple: (x_finals, y_finals) 两个一维数组，表示x和y方向的最终位移
     """
+    # 处理边界情况
+    if num_steps == 0:
+        return np.zeros(num_walks), np.zeros(num_walks)
+    if num_walks == 0:
+        return np.array([]), np.array([])
+    
     # 生成随机步长 (x和y方向各num_walks次模拟，每次num_steps步)
-    steps_x = np.random.choice([-1, 1], size=(num_walks, num_steps))
-    steps_y = np.random.choice([-1, 1], size=(num_walks, num_steps))
+    steps_x = np.random.choice([-1, 1], size=num_walks * num_steps).reshape(num_walks, num_steps)
+    steps_y = np.random.choice([-1, 1], size=num_walks * num_steps).reshape(num_walks, num_steps)
     
     # 对步数维度求和得到最终位移
-    # 添加对一维数组的支持
-    if steps_x.ndim == 1:
-        x_finals = np.sum(steps_x)
-        y_finals = np.sum(steps_y)
-    else:
-        x_finals = np.sum(steps_x, axis=1)
-        y_finals = np.sum(steps_y, axis=1)
-    return np.array([x_finals]), np.array([y_finals]) if steps_x.ndim == 1 else (x_finals, y_finals)
+    x_finals = np.sum(steps_x, axis=1)
+    y_finals = np.sum(steps_y, axis=1)
+    
+    return x_finals, y_finals
 
 def plot_endpoints_distribution(endpoints):
     """绘制二维随机游走终点的空间分布散点图"""
