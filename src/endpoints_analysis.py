@@ -25,7 +25,6 @@ def random_walk_finals(num_steps, num_walks):
     else:
         x_finals = np.sum(steps_x, axis=1)
         y_finals = np.sum(steps_y, axis=1)
-    
     return np.array([x_finals]), np.array([y_finals]) if steps_x.ndim == 1 else (x_finals, y_finals)
 
 def plot_endpoints_distribution(endpoints):
