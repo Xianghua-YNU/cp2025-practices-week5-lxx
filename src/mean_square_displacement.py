@@ -16,13 +16,15 @@ def random_walk_finals(num_steps=1000, num_walks=1000):
             - x_finals: 所有随机游走终点的x坐标数组
             - y_finals: 所有随机游走终点的y坐标数组
     """
-    # TODO: 实现随机游走算法
-    # 提示：
-    # 1. 使用np.zeros初始化数组
-    # 2. 使用np.random.choice生成随机步长
-    # 3. 使用np.sum计算总位移
-    pass
-
+    # 生成随机步长（±1）
+    steps_x = np.random.choice([-1, 1], size=(num_walks, num_steps))
+    steps_y = np.random.choice([-1, 1], size=(num_walks, num_steps))
+    
+    # 计算累计位移
+    x_finals = np.sum(steps_x, axis=1)
+    y_finals = np.sum(steps_y, axis=1)
+    
+    return x_finals, y_finals
 
 def calculate_mean_square_displacement():
     """计算不同步数下的均方位移
@@ -35,13 +37,16 @@ def calculate_mean_square_displacement():
             - steps: 步数数组 [1000, 2000, 3000, 4000]
             - msd: 对应的均方位移数组
     """
-    # TODO: 实现均方位移计算
-    # 提示：
-    # 1. 使用random_walk_finals获取终点坐标
-    # 2. 计算位移平方和
-    # 3. 使用np.mean计算平均值
-    pass
-
+    step_values = np.array([1000, 2000, 3000, 4000])
+    msd_values = np.zeros_like(step_values, dtype=float)
+    
+    for i, steps in enumerate(step_values):
+        x_finals, y_finals = random_walk_finals(steps, 1000)
+        # 计算均方位移：<r²> = <x² + y²>
+        msd = np.mean(x_finals**2 + y_finals**2)
+        msd_values[i] = msd
+    
+    return step_values, msd_values
 
 def analyze_step_dependence():
     """分析均方位移与步数的关系，并进行最小二乘拟合
@@ -52,19 +57,48 @@ def analyze_step_dependence():
             - msd: 对应的均方位移数组
             - k: 拟合得到的比例系数
     """
-    # TODO: 实现数据分析
-    # 提示：
-    # 1. 调用calculate_mean_square_displacement获取数据
-    # 2. 使用最小二乘法拟合 msd = k * steps
-    # 3. k = Σ(N·msd)/Σ(N²)
-    pass
-
+    steps, msd = calculate_mean_square_displacement()
+    
+    # 最小二乘拟合 msd = k * steps
+    k = np.sum(steps * msd) / np.sum(steps**2)
+    
+    return steps, msd, k
 
 if __name__ == "__main__":
-    # TODO: 完成主程序
-    # 提示：
-    # 1. 获取数据和拟合结果
-    # 2. 绘制实验数据点和理论曲线
-    # 3. 设置图形属性
-    # 4. 打印数据分析结果
-    pass
+    np.random.seed(42)  # 设置随机种子保证结果可重复
+    
+    # 获取数据和拟合结果
+    steps, msd, k = analyze_step_dependence()
+    
+    # 创建图形
+    plt.figure(figsize=(10, 6))
+    
+    # 绘制实验数据点
+    plt.scatter(steps, msd, color='blue', s=100, label='Simulation Data', zorder=3)
+    
+    # 绘制理论拟合曲线
+    fit_line = k * steps
+    plt.plot(steps, fit_line, 'r--', linewidth=2, 
+             label=f'Linear Fit: MSD = {k:.4f}·N', zorder=2)
+    
+    # 设置图形属性
+    plt.title('Mean Square Displacement vs Number of Steps', pad=20)
+    plt.xlabel('Number of Steps (N)')
+    plt.ylabel('Mean Square Displacement (MSD)')
+    plt.grid(True, alpha=0.3)
+    plt.legend()
+    
+    # 打印分析结果
+    print("="*50)
+    print("随机游走模拟结果分析")
+    print("="*50)
+    print(f"{'步数(N)':<10}{'模拟MSD':<15}{'理论预测(k*N)':<15}")
+    for n, m in zip(steps, msd):
+        print(f"{n:<10}{m:<15.2f}{(k*n):<15.2f}")
+    print("="*50)
+    print(f"拟合得到的比例系数 k = {k:.4f}")
+    print(f"理论预期值 k = 2.0 (对于二维随机游走)")
+    print("="*50)
+    
+    plt.tight_layout()
+    plt.show()
